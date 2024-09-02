@@ -6,11 +6,12 @@ authors = ["okunola <abdayoade@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13"
 openai = "^1.43.0"
 psycopg2-binary = "^2.9.9"
 argparse = "^1.4.0"
 python-dotenv = "^1.0.1"
+pyautogen = "^0.2.35"
 
 
 [build-system]
