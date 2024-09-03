@@ -211,34 +211,79 @@ def main():
         # sr data analyst agent - runs the sql query and generates the response
         sr_data_analyst = autogen.AssistantAgent(
             name="Sr_Data_Analyst",
-            llm_config=gpt4_config,
+            llm_config=run_sql_config,
             system_message=SR_DATA_ANALYST_PROMPT,
             code_execution_config=False,
             human_input_mode="NEVER",
             is_termination_msg=is_termination_msg,
-            function_map=function_map
+            function_map=function_map_run_sql
         )
 
         # product manager - validates the response to make sure it's correct
         product_manager = autogen.AssistantAgent(
             name="Product_Manager",
-            llm_config=gpt4_config,
+            llm_config=base_config,
             system_message=PRODUCT_MANAGER_PROMPT,
             code_execution_config=False,
             human_input_mode="NEVER",
             is_termination_msg=is_termination_msg
         )
 
-        # create a group chat and initiate the chat
-        groupchat = autogen.GroupChat(
-            agents=[user_proxy, data_engineer, sr_data_analyst, product_manager],
-            messages=[],
-            max_round=10
+        data_engineering_agents = [user_proxy, data_engineer, sr_data_analyst, product_manager]
+
+        data_engr_orchestrator = orchestrator.Orchestrator(
+            name="Postgres Data Analytics Multi-Agent ::: Data Engineering Team",
+            agents=data_engineering_agents
         )
-        manager = autogen.GroupChatManager(groupchat=groupchat)
 
-        user_proxy.initiate_chat(manager, clear_history=True, message=prompt)
+        success, data_engr_messages = data_engr_orchestrator.sequential_conversation(prompt)
 
+        print(f"---------- DATA ENGR RESULTS ----------")
+        print(f"Data Engineer Result is: {data_engr_messages[-2]["content"]}")
+        data_engr_results = data_engr_messages[-2]['content']
+
+
+        # -------------------------------- REPORT ANALYST AGENTS -----------------------------------------------------
+
+        TEXT_REPORT_ANALYST_PROMPT = "Text File Report Analyst. You exclusively use the write_file function on a summarized report."
+        JSON_REPORT_ANALYST_PROMPT = "JSON Report Analyst. You exclusively use the write_json_file function on the report."
+        YML_REPORT_ANALYST_PROMPT = "YAML Report Analyst. You exclusively use the write_yml_file function on the report."
+
+        # text report analyst - writes a summary report of the result and saves them to a local text file
+        text_report_analyst = autogen.AssistantAgent(
+            name="Text_Report_Analyst",
+            llm_config=write_file_config,
+            system_message=TEXT_REPORT_ANALYST_PROMPT,
+            function_map=function_map_write_file
+        )
+
+        # json_report analyst - writes a summary report of the results and saves them to a local json file
+        json_report_analyst = autogen.AssistantAgent(
+            name="JSON_Report_Analyst",
+            llm_config=write_json_file_config,
+            system_message=JSON_REPORT_ANALYST_PROMPT,
+            function_map=function_map_write_json_file
+        )
+
+        # yaml report analyst - writes a summary report of the results and saves them to a local yaml file
+        yml_report_analyst = autogen.AssistantAgent(
+            name="YML_Report_Analyst",
+            llm_config=write_yml_file_config,
+            system_message=YML_REPORT_ANALYST_PROMPT,
+            function_map=function_map_write_yml_file
+        )
+
+        data_report_agents = [user_proxy, text_report_analyst, json_report_analyst, yml_report_analyst]
+
+        data_report_orchestrator = orchestrator.Orchestrator(
+            name="Postgres Data Analytics Multi-Agent ::: Data Report Team",
+            agents=data_report_agents
+        )
+
+        data_report_prompt = f"Here is the data to report: {data_engr_results}"
+
+        if data_engr_results:
+            data_report_orchestrator.broadcast_conversation(data_report_prompt)
 
 
 if __name__ == "__main__":
