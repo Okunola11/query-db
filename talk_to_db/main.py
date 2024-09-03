@@ -201,7 +201,7 @@ def main():
         # data engineer agent - generated the sql query
         data_engineer = autogen.AssistantAgent(
             name="Engineer",
-            llm_config=gpt4_config,
+            llm_config=base_config,
             system_message=DATA_ENGINEER_PROMPT,
             code_execution_config=False,
             human_input_mode="NEVER",
