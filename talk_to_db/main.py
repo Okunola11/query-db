@@ -47,10 +47,16 @@ def main():
         )
 
         # build the gpt configuration object
-        gpt4_config = {
+        # base configuration
+        base_config = {
             "temperature": 0,
             "config_list": [{"model": "gpt-4o-mini", "api_key": OPENAI_API_KEY}],
             "timeout": 120,
+        }
+
+        # configuration with 'run_sql'
+        run_sql_config = {
+            **base_config,
             "functions": [
                 {
                     "name": "run_sql",
