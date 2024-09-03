@@ -2,7 +2,7 @@ import argparse
 import autogen
 
 from talk_to_db.modules.db import PostgresManager
-from talk_to_db.modules import llm
+from talk_to_db.modules import llm, orchestrator, file
 from talk_to_db.settings import DB_URL
 from talk_to_db.settings import OPENAI_API_KEY
 
@@ -75,9 +75,96 @@ def main():
             ]
         }
 
+        # configuration with 'write_file'
+        write_file_config = {
+            **base_config,
+            "functions": [
+                {
+                    "name": "write_file",
+                    "description": "Write a file to the filesystem",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fname": {
+                                "type": "string",
+                                "description": "The name of the file to write",
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "The content of the file to write"
+                            }
+                        },
+                        "required": ['fname', 'content'],
+                    },
+                },
+            ]
+        }
+
+        # configuration with 'write_json_file'
+        write_json_file_config = {
+            **base_config,
+            "functions": [
+                {
+                    "name": "write_json_file",
+                    "description": "Write a json file to the filesystem",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fname": {
+                                "type": "string",
+                                "description": "The name of the file to write",
+                            },
+                            "json_str": {
+                                "type": "string",
+                                "description": "The content of the file to write"
+                            }
+                        },
+                        "required": ['fname', 'json_str']
+                    }
+                }
+            ]
+        }
+
+        # configuration with 'write_yaml_file'
+        write_yml_file_config = {
+            **base_config,
+            "functions": [
+                {
+                    "name": "write_yml_file",
+                    "description": "Write a yaml file to the filesystem",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fname": {
+                                "type": "string",
+                                "description": "The name of the file to write",
+                            },
+                            "json_str": {
+                                "type": "string",
+                                "description": "The content of the file to write"
+                            }
+                        },
+                        "required": ['fname', 'json_str'],
+                    },
+                },
+            ]
+        }
+
         # build the function map
-        function_map = {
+        function_map_run_sql = {
             "run_sql": db.run_sql,
+        }
+
+        function_map_write_file = {
+            "write_file": file.write_file,
+        }
+
+        function_map_write_json_file = {
+            "write_json_file": file.write_json_file,
+        }
+
+        function_map_write_yml_file = {
+            "write_yml_file": file.write_yml_file,
         }
 
         # create our terminate message
