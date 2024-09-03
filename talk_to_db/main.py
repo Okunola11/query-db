@@ -176,20 +176,11 @@ def main():
 
         COMPLETION_PROMPT = "If everything looks good, respond with APPROVED"
 
-        USER_PROXY_PROMT = (
-            "A human admin. Interact with the Product Manager to discuss the plan. Plan execution needs to be approved by this admin."
-            + COMPLETION_PROMPT
-        )
+        USER_PROXY_PROMT = "A human admin. Interact with the Product Manager to discuss the plan. Plan execution needs to be approved by this admin."
 
-        DATA_ENGINEER_PROMPT = (
-            "A Data Engineer. You follow an approved plan. Generate the initial SQL based on the requirements provided. Send it to the Sr Data Analyst to be executed."
-            + COMPLETION_PROMPT
-        )
+        DATA_ENGINEER_PROMPT = "A Data Engineer. You follow an approved plan. Generate the initial SQL based on the requirements provided. Send it to the Sr Data Analyst to be executed."
 
-        SR_DATA_ANALYST_PROMPT = (
-            "Sr Data Analyst. You follow an approved plan. You run the SQL query, generate the response and send it to the product manager for final review"
-            + COMPLETION_PROMPT
-        )
+        SR_DATA_ANALYST_PROMPT = "Sr Data Analyst. You follow an approved plan. You run the SQL query, generate the response and send it to the product manager for final review"
 
         PRODUCT_MANAGER_PROMPT = (
             "Product Manager. Validate the response to make sure it is correct."
