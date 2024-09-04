@@ -7,6 +7,7 @@ Purpose:
 import sys
 import openai
 from typing import Any, Dict
+import tiktoken
 
 from talk_to_db.settings import OPENAI_API_KEY
 
@@ -113,3 +114,40 @@ def add_cap_ref(prompt: str, prompt_suffix: str, cap_ref: str, cap_ref_content: 
     new_prompt = f"""{prompt} {prompt_suffix}\n\n{cap_ref}\n\n{cap_ref_content}"""
 
     return new_prompt
+
+# ------------------- TOKEN COST -------------------
+
+def count_tokens(text: str):
+    """Counts the number of tokens in the given text.
+
+    Args:
+        text (str): The input text to count tokens from.
+
+    Returns:
+        int: The number of tokens in the text.
+    """
+
+    enc = tiktoken.get_encoding("cl100k_base")
+    return len(enc.encode(text))
+
+def estimate_price_and_tokens(text):
+    """Estimates the price and token count for the given text.
+
+    Args:
+        text (str): The input text to estimate price and tokens for.
+
+    Returns:
+        tuple: A tuple containing the estimated cost (float) and token count (int).
+    """
+
+    # round up to the input tokens
+    COST_PER_1K_TOKENS = 0.06
+
+    tokens = count_tokens(text)
+
+    estimated_cost = (tokens / 1000) * COST_PER_1K_TOKENS
+
+    # round
+    estimated_cost = round(estimated_cost, 2)
+
+    return estimated_cost, tokens
