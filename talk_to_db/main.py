@@ -2,9 +2,10 @@ import argparse
 import autogen
 
 from talk_to_db.modules.db import PostgresManager
-from talk_to_db.modules import llm, orchestrator, file
+from talk_to_db.modules import llm, orchestrator, file, embeddings
 from talk_to_db.settings import DB_URL
 from talk_to_db.settings import OPENAI_API_KEY
+from talk_to_db.agents import agents
 
 POSTGRES_TABLE_DEFINITIONS_CAP_REF = "TABLE_DEFINITIONS"
 RESPONSE_FORMAT_CAP_REF = "RESPONSE_FORMAT"
@@ -35,12 +36,27 @@ def main():
         print("Please provide a prompt")
         return
 
-    prompt = f"Fulfill this database query: {args.prompt}"
+    raw_prompt = args.prompt
+
+    prompt = f"Fulfill this database query: {raw_prompt}"
 
     with PostgresManager() as db:
         db.connect_with_url(DB_URL)
 
-        table_definitions = db.get_table_definitions_for_prompt()
+        map_table_name_to_table_def = db.get_table_definition_map_for_embeddings()
+
+        database_embedder = embeddings.DatabaseEmbedder()
+
+        for name, table_def in map_table_name_to_table_def.items():
+            database_embedder.add_table(name, table_def)
+
+        similar_tables = database_embedder.get_similar_tables(raw_prompt, n=2)
+        print("\n---------------- SIMILAR TABLES ---------------")
+        print(similar_tables)
+
+        table_definitions = database_embedder.get_table_definitions_from_names(
+            similar_tables
+        )
 
         prompt = llm.add_cap_ref(
             prompt,
@@ -49,195 +65,7 @@ def main():
             table_definitions
         )
 
-        # build the gpt configuration object
-        # base configuration
-        base_config = {
-            "temperature": 0,
-            "config_list": [{"model": "gpt-4o-mini", "api_key": OPENAI_API_KEY}],
-            "timeout": 120,
-        }
-
-        # configuration with 'run_sql'
-        run_sql_config = {
-            **base_config,
-            "functions": [
-                {
-                    "name": "run_sql",
-                    "description": "Run a SQL query against the postgres database",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "sql": {
-                                "type": "string",
-                                "description": "The SQL query to run",
-                            }
-                        },
-                        "required": ['sql'],
-                    },
-                },
-            ]
-        }
-
-        # configuration with 'write_file'
-        write_file_config = {
-            **base_config,
-            "functions": [
-                {
-                    "name": "write_file",
-                    "description": "Write a file to the filesystem",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "fname": {
-                                "type": "string",
-                                "description": "The name of the file to write",
-                            },
-                            "content": {
-                                "type": "string",
-                                "description": "The content of the file to write"
-                            }
-                        },
-                        "required": ['fname', 'content'],
-                    },
-                },
-            ]
-        }
-
-        # configuration with 'write_json_file'
-        write_json_file_config = {
-            **base_config,
-            "functions": [
-                {
-                    "name": "write_json_file",
-                    "description": "Write a json file to the filesystem",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "fname": {
-                                "type": "string",
-                                "description": "The name of the file to write",
-                            },
-                            "json_str": {
-                                "type": "string",
-                                "description": "The content of the file to write"
-                            }
-                        },
-                        "required": ['fname', 'json_str']
-                    }
-                }
-            ]
-        }
-
-        # configuration with 'write_yaml_file'
-        write_yml_file_config = {
-            **base_config,
-            "functions": [
-                {
-                    "name": "write_yml_file",
-                    "description": "Write a yaml file to the filesystem",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "fname": {
-                                "type": "string",
-                                "description": "The name of the file to write",
-                            },
-                            "json_str": {
-                                "type": "string",
-                                "description": "The content of the file to write"
-                            }
-                        },
-                        "required": ['fname', 'json_str'],
-                    },
-                },
-            ]
-        }
-
-        # build the function map
-        function_map_run_sql = {
-            "run_sql": db.run_sql,
-        }
-
-        function_map_write_file = {
-            "write_file": file.write_file,
-        }
-
-        function_map_write_json_file = {
-            "write_json_file": file.write_json_file,
-        }
-
-        function_map_write_yml_file = {
-            "write_yml_file": file.write_yml_file,
-        }
-
-        # create our terminate message
-        def is_termination_msg(content):
-            have_content = content.get("content", None)
-            if have_content and "APPROVED" in content["content"]:
-                return True
-            return False
-
-        COMPLETION_PROMPT = "If everything looks good, respond with APPROVED"
-
-        USER_PROXY_PROMT = "A human admin. Interact with the Product Manager to discuss the plan. Plan execution needs to be approved by this admin."
-
-        DATA_ENGINEER_PROMPT = "A Data Engineer. You follow an approved plan. Generate the initial SQL based on the requirements provided. Send it to the Sr Data Analyst to be executed."
-
-        SR_DATA_ANALYST_PROMPT = "Sr Data Analyst. You follow an approved plan. You run the SQL query, generate the response and send it to the product manager for final review"
-
-        PRODUCT_MANAGER_PROMPT = (
-            "Product Manager. Validate the response to make sure it is correct."
-            + COMPLETION_PROMPT
-        )
-
-        # Creating agents with specific roles
-
-        # Admin user proxy agent - takes in the prompt and manages the group chat
-        user_proxy = autogen.UserProxyAgent(
-            name="Admin",
-            system_message=USER_PROXY_PROMT,
-            code_execution_config=False,
-            human_input_mode="NEVER",
-            is_termination_msg=is_termination_msg
-        )
-
-        # data engineer agent - generated the sql query
-        data_engineer = autogen.AssistantAgent(
-            name="Engineer",
-            llm_config=base_config,
-            system_message=DATA_ENGINEER_PROMPT,
-            code_execution_config=False,
-            human_input_mode="NEVER",
-            is_termination_msg=is_termination_msg
-        )
-
-        # sr data analyst agent - runs the sql query and generates the response
-        sr_data_analyst = autogen.AssistantAgent(
-            name="Sr_Data_Analyst",
-            llm_config=run_sql_config,
-            system_message=SR_DATA_ANALYST_PROMPT,
-            code_execution_config=False,
-            human_input_mode="NEVER",
-            is_termination_msg=is_termination_msg,
-            function_map=function_map_run_sql
-        )
-
-        # product manager - validates the response to make sure it's correct
-        product_manager = autogen.AssistantAgent(
-            name="Product_Manager",
-            llm_config=base_config,
-            system_message=PRODUCT_MANAGER_PROMPT,
-            code_execution_config=False,
-            human_input_mode="NEVER",
-            is_termination_msg=is_termination_msg
-        )
-
-        data_engineering_agents = [user_proxy, data_engineer, sr_data_analyst, product_manager]
-
-        data_engr_orchestrator = orchestrator.Orchestrator(
-            name="Postgres Data Analytics Multi-Agent ::: Data Engineering Team",
-            agents=data_engineering_agents
-        )
+        data_engr_orchestrator = agents.build_team_orchestrator("data_engr", db)
 
         success, data_engr_messages = data_engr_orchestrator.sequential_conversation(prompt)
 
