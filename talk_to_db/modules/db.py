@@ -71,7 +71,12 @@ class PostgresManager:
             list_of_dicts = [(dict(zip(columns, row))) for row in res]
 
             json_result = json.dumps(list_of_dicts, indent=4, default=self.datetime_handler)
-            return json_result
+
+            # dumping the results to a file
+            with open("results.json", "w") as f:
+                f.write(json_result)
+
+            return "Successfully delivered results to json file"
         except Exception as e:
             print(f"Error executing SQL query: {e}")
             raise
