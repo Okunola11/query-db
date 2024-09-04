@@ -12,16 +12,19 @@ RESPONSE_FORMAT_CAP_REF = "RESPONSE_FORMAT"
 SQL_DELIMITER = "----------"
 
 def main():
-    """The main function for the Postgres AI agent.
+    """
+    The main function for the Postgres AI agent.
 
     This function parses command-line arguments, generates a prompt for the AI, and executes
     the generated SQL query using the PostgresManager.
 
-    Args:
-        None
-
-    Returns:
-        None
+    It now includes the following steps:
+        1. Retrieves table definitions from the database.
+        2. Creates a `DatabaseEmbedder` instance and adds table definitions to it.
+        3. Finds similar tables based on the prompt.
+        4. Adds table definitions to the prompt as a reference.
+        5. Orchestrates a conversation with a team of data engineering agents.
+        6. Prints the results and cost information.
     """
     
     parser = argparse.ArgumentParser()
