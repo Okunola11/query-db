@@ -163,4 +163,16 @@ class PostgresManager:
             definitions.append(self.get_table_definitions(table_name))
         return "\n\n".join(definitions)
 
+    def get_table_definition_map_for_embeddings(self):
+        """Retrieves a mapping of table names to their definitions for use in embeddings.
+
+        Returns:
+            dict: A dictionary where keys are table names and values are their corresponding definitions.
+        """
+        table_names = self.get_all_table_names()
+        definitions = {}
+        for table_name in table_names:
+            definitions[table_name] = self.get_table_definitions(table_name)
+        return definitions
+
     
