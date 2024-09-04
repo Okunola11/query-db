@@ -13,6 +13,10 @@ argparse = "^1.4.0"
 python-dotenv = "^1.0.1"
 pyautogen = "^0.2.35"
 pyyaml = "^6.0.2"
+transformers = "^4.44.2"
+torch = "^2.4.0"
+tiktoken = "^0.7.0"
+scikit-learn = "^1.5.1"
 
 
 [build-system]
