@@ -1,16 +1,14 @@
 import argparse
-import autogen
 
 from talk_to_db.modules.db import PostgresManager
-from talk_to_db.modules import llm, orchestrator, file, embeddings
+from talk_to_db.modules import llm, embeddings
 from talk_to_db.settings import DB_URL
-from talk_to_db.settings import OPENAI_API_KEY
 from talk_to_db.agents import agents
+
 
 POSTGRES_TABLE_DEFINITIONS_CAP_REF = "TABLE_DEFINITIONS"
 RESPONSE_FORMAT_CAP_REF = "RESPONSE_FORMAT"
 
-SQL_DELIMITER = "----------"
 
 def main():
     """
