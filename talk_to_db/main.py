@@ -75,46 +75,28 @@ def main():
 
 
         # -------------------------------- REPORT ANALYST AGENTS -----------------------------------------------------
+        # read the results written to 'results.json'
+        with open("results.json", "r") as f:
+            content = f.read()
+        
+        data_report_orchestrator = agents.build_team_orchestrator("data_report")
 
-        TEXT_REPORT_ANALYST_PROMPT = "Text File Report Analyst. You exclusively use the write_file function on a summarized report."
-        JSON_REPORT_ANALYST_PROMPT = "JSON Report Analyst. You exclusively use the write_json_file function on the report."
-        YML_REPORT_ANALYST_PROMPT = "YAML Report Analyst. You exclusively use the write_yml_file function on the report."
-
-        # text report analyst - writes a summary report of the result and saves them to a local text file
-        text_report_analyst = autogen.AssistantAgent(
-            name="Text_Report_Analyst",
-            llm_config=write_file_config,
-            system_message=TEXT_REPORT_ANALYST_PROMPT,
-            function_map=function_map_write_file
-        )
-
-        # json_report analyst - writes a summary report of the results and saves them to a local json file
-        json_report_analyst = autogen.AssistantAgent(
-            name="JSON_Report_Analyst",
-            llm_config=write_json_file_config,
-            system_message=JSON_REPORT_ANALYST_PROMPT,
-            function_map=function_map_write_json_file
-        )
-
-        # yaml report analyst - writes a summary report of the results and saves them to a local yaml file
-        yml_report_analyst = autogen.AssistantAgent(
-            name="YML_Report_Analyst",
-            llm_config=write_yml_file_config,
-            system_message=YML_REPORT_ANALYST_PROMPT,
-            function_map=function_map_write_yml_file
-        )
-
-        data_report_agents = [user_proxy, text_report_analyst, json_report_analyst, yml_report_analyst]
-
-        data_report_orchestrator = orchestrator.Orchestrator(
-            name="Postgres Data Analytics Multi-Agent ::: Data Report Team",
-            agents=data_report_agents
-        )
-
-        data_report_prompt = f"Here is the data to report: {data_engr_results}"
+        data_report_prompt = f"Here is the data to report: {content}"
 
         if data_engr_results:
             data_report_orchestrator.broadcast_conversation(data_report_prompt)
+
+        # ----------------------------------------------------------------------------------------------
+
+        data_engr_cost, data_engr_tokens = data_engr_orchestrator.get_cost_and_tokens()
+        data_report_cost, data_report_tokens = data_report_orchestrator.get_cost_and_tokens()
+
+        print(f"Data Engr Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
+        print(f"Data Report Cost: {data_report_cost}, tokens: {data_report_tokens}")
+
+        # print(f"💰📊🤖 Organization Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
+        print(f"💰📊🤖 Organization Cost: {data_engr_cost + data_report_cost}, tokens: {data_engr_tokens + data_report_tokens}")
+
 
 
 if __name__ == "__main__":
