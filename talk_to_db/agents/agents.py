@@ -212,14 +212,14 @@ def build_team_orchestrator(
 
     if team == "data_engr":
         return orchestrator.Orchestrator(
-            name="Postgres Data Analytics Multi-Agent ::: Data Engineering Team",
+            name="data_engr_team",
             agents=build_data_engr_team(agent_instruments),
             instruments=agent_instruments,
             validate_results_func=validate_results
         )
     elif team == "data_report":
         return orchestrator.Orchestrator(
-            name="Postgres Data Analytics Multi-Agent ::: Data Report Team",
+            name="data_report_team",
             agents=build_data_report_team(agent_instruments),
             instruments=agent_instruments,
             validate_results_func=validate_results
