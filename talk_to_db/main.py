@@ -48,6 +48,35 @@ def main():
     session_id = rand.generate_session_id(raw_prompt)
 
     with PostgresAgentInstruments(DB_URL, session_id) as (agent_instruments, db):
+        # ---------------- GATE TEAM: Prevents bad prompts from running ----------------
+
+        gate_orchestrator = agents.build_team_orchestrator(
+            "scrum_master",
+            agent_instruments,
+            validate_results=lambda: (True, "")
+        )
+
+        gate_orchestrator_result: ConversationResult = (
+            gate_orchestrator.sequential_conversation(prompt)
+        )
+
+        print("gate_orchestrator.last_message_str", gate_orchestrator_result.last_message_str)
+
+        nlq_confidence = int(gate_orchestrator_result.last_message_str)
+
+        match nlq_confidence:
+            case (1 | 2):
+                print(f"❌ Gate Team Rejected - Confidence too low: {nlq_confidence}")
+                return
+            case (3 | 4 | 5):
+                print(f"✅ Gate Team Approved - Valid confidence: {nlq_confidence}")
+                print(f"💰📊🤖 Gate team Cost: {gate_orchestrator_result.cost}, tokens: {gate_orchestrator_result.tokens}")
+            case _:
+                print("❌ Gate Team Rejected - Invalid response")
+                return
+
+        # ---------------- BUILDING TABLE DEFINITIONS ----------------
+
         map_table_name_to_table_def = db.get_table_definition_map_for_embeddings()
 
         database_embedder = embeddings.DatabaseEmbedder()
@@ -70,6 +99,8 @@ def main():
             table_definitions
         )
 
+        # -------------------------------- DATA ENGINEERING TEAM --------------------------------
+
         data_engr_orchestrator = agents.build_team_orchestrator(
             "data_engr",
             agent_instruments,
@@ -91,7 +122,7 @@ def main():
                 print(f"💰📊🤖 Organization Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
             case _:
                 print(f"❌ Orchestrator failed. Team: {data_engr_orchestrator.name} Failed.")
-                
+
 
 if __name__ == "__main__":
     main()
