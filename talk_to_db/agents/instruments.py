@@ -41,6 +41,15 @@ class AgentInstruments:
 
         raise NotImplementedError
 
+    def make_agent_chat_file(self, team_name: str):
+        """Returns the path to the agents chat file for a team.
+
+        Returns:
+            str: The path to the team's agent chat file.
+        """
+
+        return os.path.join(self.root_dir, f"agents_chat_{team_name}.json")
+
     @property
     def root_dir(self):
         """Returns the root directory for the session.
@@ -50,16 +59,6 @@ class AgentInstruments:
         """
 
         return os.path.join(BASE_DIR, self.session_id)
-
-    @property
-    def agent_chat_file(self):
-        """Returns the path to the agent chat file.
-
-        Returns:
-            str: The path to the agent chat file.
-        """
-
-        return os.path.join(self.root_dir, "agent_chat.json")
 
 
 class PostgresAgentInstruments(AgentInstruments):
@@ -288,7 +287,7 @@ class PostgresAgentInstruments(AgentInstruments):
         Returns:
             bool: True if all innovation files are valid, False otherwise.
         """
-        
+
         # loop from 0 to innovation_index and verify file exists with content
         for i in range(self.innovation_index):
             fname = self.get_file_path(f"{i}_innovation_file.txt")
