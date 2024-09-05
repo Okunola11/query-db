@@ -60,7 +60,7 @@ class PostgresManager:
             sql: The SQL query to execute.
 
         Returns:
-            A JSON string representing the query results.
+            JSON: result of the query.
         """
 
         try:
@@ -76,7 +76,7 @@ class PostgresManager:
             with open("results.json", "w") as f:
                 f.write(json_result)
 
-            return "Successfully delivered results to json file"
+            return json_result
         except Exception as e:
             print(f"Error executing SQL query: {e}")
             raise
