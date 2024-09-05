@@ -289,7 +289,7 @@ class Orchestrator:
             conversations.append(dataclasses.asdict(chat))
 
         if append_to_file:
-            file_name = self.instruments.agent_chat_file
+            file_name = self.instruments.make_agent_chat_file(self.name)
             with open(file_name, "w") as f:
                 f.write(json.dumps(conversations, indent=4))
 
