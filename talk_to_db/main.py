@@ -45,9 +45,9 @@ def main():
 
     prompt = f"Fulfill this database query: {raw_prompt}"
 
-    with PostgresManager() as db:
-        db.connect_with_url(DB_URL)
+    session_id = rand.generate_session_id(raw_prompt)
 
+    with PostgresAgentInstruments(DB_URL, session_id) as (agent_instruments, db):
         map_table_name_to_table_def = db.get_table_definition_map_for_embeddings()
 
         database_embedder = embeddings.DatabaseEmbedder()
@@ -70,25 +70,28 @@ def main():
             table_definitions
         )
 
-        data_engr_orchestrator = agents.build_team_orchestrator("data_engr", db)
+        data_engr_orchestrator = agents.build_team_orchestrator(
+            "data_engr",
+            agent_instruments,
+            validate_results=agent_instruments.validate_run_sql
+        )
 
-        success, data_engr_messages = data_engr_orchestrator.sequential_conversation(prompt)
+        data_engr_conversation_result: ConversationResult = (
+            data_engr_orchestrator.sequential_conversation(prompt)
+        )
 
-        print(f"---------- DATA ENGR RESULTS ----------")
-        print(f"Data Engineer Result is: {data_engr_messages[-2]["content"]}")
-        data_engr_results = data_engr_messages[-2]['content']
+        match data_engr_conversation_result:
+            case ConversationResult(
+                success=True, cost=data_engr_cost, tokens=data_engr_tokens
+            ):
+                print(f"✅ Orchestrator was successful. Team: {data_engr_orchestrator.name}")
 
+                print(f"Data Engr Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
 
-
-        # ----------------------------------------------------------------------------------------------
-
-        data_engr_cost, data_engr_tokens = data_engr_orchestrator.get_cost_and_tokens()
-
-        print(f"Data Engr Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
-
-        print(f"💰📊🤖 Organization Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
-
-
+                print(f"💰📊🤖 Organization Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
+            case _:
+                print(f"❌ Orchestrator failed. Team: {data_engr_orchestrator.name} Failed.")
+                
 
 if __name__ == "__main__":
     main()
