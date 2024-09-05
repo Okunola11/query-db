@@ -1,29 +1,36 @@
 import argparse
 
 from talk_to_db.modules.db import PostgresManager
-from talk_to_db.modules import llm, embeddings
+from talk_to_db.modules import llm, embeddings, rand
 from talk_to_db.settings import DB_URL
 from talk_to_db.agents import agents
+from talk_to_db.agents.instruments import PostgresAgentInstruments
+from talk_to_db.types import ConversationResult
 
 
 POSTGRES_TABLE_DEFINITIONS_CAP_REF = "TABLE_DEFINITIONS"
-RESPONSE_FORMAT_CAP_REF = "RESPONSE_FORMAT"
 
 
 def main():
     """
     The main function for the Postgres AI agent.
 
-    This function parses command-line arguments, generates a prompt for the AI, and executes
-    the generated SQL query using the PostgresManager.
+    This function performs the following steps:
 
-    It now includes the following steps:
-        1. Retrieves table definitions from the database.
-        2. Creates a `DatabaseEmbedder` instance and adds table definitions to it.
-        3. Finds similar tables based on the prompt.
-        4. Adds table definitions to the prompt as a reference.
-        5. Orchestrates a conversation with a team of data engineering agents.
-        6. Prints the results and cost information.
+    1. Parses command-line arguments for the prompt.
+    2. Validates the presence of the prompt and exits if missing.
+    3. Creates a user-friendly prompt by prepending "Fulfill this database query:".
+    4. Generates a session ID for tracking.
+    5. Establishes a connection to the Postgres database and retrieves table definitions.
+    6. Creates a `DatabaseEmbedder` instance to embed table information.
+    7. Adds retrieved table definitions to the `DatabaseEmbedder`.
+    8. Identifies similar tables based on the user prompt using embeddings.
+    9. Extracts definitions for the identified similar tables.
+    10. Enhances the prompt by adding a reference to the retrieved table definitions.
+    11. Constructs a `DataEngineeringOrchestrator` object with validation capabilities.
+    12. Orchestrates a sequential conversation with the data engineering team using the enhanced prompt.
+    13. Gets the conversation results, including success status, cost, and tokens.
+
     """
     
     parser = argparse.ArgumentParser()
