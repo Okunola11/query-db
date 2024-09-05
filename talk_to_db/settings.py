@@ -7,3 +7,5 @@ load_dotenv()
 
 DB_URL = os.environ.get("DATABASE_URL")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+BASE_DIR = os.environ.get("BASE_DIR", "./agent_results")
