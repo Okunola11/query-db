@@ -1,6 +1,7 @@
 
 import autogen
-from typing import Optional
+import guidance
+from typing import Optional, List, Any, Dict
 
 from talk_to_db.modules.db import PostgresManager
 from talk_to_db.agents import agent_config
@@ -38,6 +39,20 @@ USER_PROXY_PROMT = "A human admin. Interact with the Product Manager to discuss 
 DATA_ENGINEER_PROMPT = "A Data Engineer. You follow an approved plan. Generate the initial SQL based on the requirements provided. Send it to the Sr Data Analyst to be executed."
 
 SR_DATA_ANALYST_PROMPT = "Sr Data Analyst. You follow an approved plan. You run the SQL query, generate the response and send it to the product manager for final review"
+
+GUIDANCE_SCRUM_MASTER_SQL_NLQ_PROMPT = """
+Is the following block of text a SQL Natural Language Query (NLQ)? Please rank from 1 to 5, where:
+1: Definitely not NLQ
+2: Likely not NLQ
+3: Neutral / Unsure
+4: Likely NLQ
+5: Definitely NLQ
+
+Return the rank as a number exclusively using the rank variable to be casted as an integer.
+
+Block of Text: {{potential_nlq}}
+{{#select "rank" logprobs='logprobs'}} 1{{or}} 2{{or}} 3{{or}} 4{{or}} 5{{/select}}
+"""
 
 PRODUCT_MANAGER_PROMPT = (
     "Product Manager. Validate the response to make sure it is correct."
@@ -156,6 +171,23 @@ def build_data_report_team(instruments: PostgresAgentInstruments):
 
     return [user_proxy, text_report_analyst, json_report_analyst, yml_report_analyst]
 
+def build_scrum_master_team(instruments: PostgresAgentInstruments):
+    user_proxy = autogen.UserProxyAgent(
+        name="Admin",
+        system_message=USER_PROXY_PROMT,
+        code_execution_config=False,
+        human_input_mode="NEVER"
+    )
+
+    scrum_agent = DefensiveScrumMasterAgent(
+        name="Scrum_Master",
+        llm_config=agent_config.base_config,
+        system_message=GUIDANCE_SCRUM_MASTER_SQL_NLQ_PROMPT,
+        human_input_mode="NEVER"
+    )
+
+    return [user_proxy, scrum_agent]
+
 # ------------------- ORCHESTRATION -------------------
 
 def build_team_orchestrator(
@@ -192,5 +224,65 @@ def build_team_orchestrator(
             instruments=agent_instruments,
             validate_results_func=validate_results
         )
+    elif team == "scrum_master":
+        return orchestrator.Orchestrator(
+            name="scrum_master_team",
+            agents=build_scrum_master_team(agent_instruments),
+            instruments=agent_instruments,
+            validate_results_func=validate_results
+        )
 
     raise Exception("Unknown team: " + team)
+
+
+# ------------------- CUSTOM AGENTS -------------------
+
+class DefensiveScrumMasterAgent(autogen.ConversableAgent):
+    """
+    Custom agent that uses the guidance function to determine if a message is a SQL NLQ.
+
+    This agent is designed to work within a conversational framework, and uses the guidance function to analyze incoming messages and determine if they contain SQL Natural Language Queries (NLQs).
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initializes the DefensiveScrumMasterAgent.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Notes:
+            Registers the check_sql_nlq method as a reply function for this agent.
+        """
+
+        super().__init__(*args, **kwargs)
+        # Register the new reply function for this specific agent
+        self.register_reply(self, self.check_sql_nlq, position=0)
+
+    def check_sql_nlq(
+        self,
+        messages: Optional[List[Dict]] = None,
+        sender: Optional[autogen.Agent] = None,
+    ):
+        """Checks the last received message to determine if it's a SQL NLQ.
+
+        Args:
+            messages (Optional[List[Dict]], optional): A list of message dictionaries. Defaults to None.
+            sender (Optional[autogen.Agent], optional): The sender agent. Defaults to None.
+
+        Returns:
+            Tuple[bool, str]: A tuple containing a boolean indicating whether the message is a SQL NLQ, and the rank of the message.
+        """
+
+        last_message = messages[-1]["content"]
+
+        # use guidance string to determine if the message is a SQL NLQ
+        response = guidance(
+            GUIDANCE_SCRUM_MASTER_SQL_NLQ_PROMPT, potential_nlq=last_message
+        )
+
+        # we can return the whole response or just a simplified version
+        # we opt to return the rank here
+        rank = response.get("choices", [{}])[0].get("rank", "3")
+
+        return True, rank
