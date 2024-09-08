@@ -423,3 +423,70 @@ class Orchestrator:
             tokens=tokens,
             last_message_str=self.last_message_always_string
         )
+
+    def round_robin_conversation(self, prompt: str, loops: int = 1) -> ConversationResult:
+        """Runs a basic round robin conversation between agents.
+
+        This method facilitates a conversation where each agent in the list communicates with the next agent in a sequential order. The conversation loops for a specified number of times.
+
+        Example for a setup with agents A, B, and C:
+
+        - (1)
+            - A -> B
+            - B -> C
+            - C -> A
+        - (2)
+            - A -> B
+            - B -> C
+            - C -> A
+        
+        Args:
+            prompt (str): The initial prompt to start the conversation.
+            loops (int, optional): The number of times to repeat the round robin sequence. Defaults to 1.
+
+        Returns:
+            ConversationResult: A `ConversationResult` object containing details about the conversation,
+                                including success status, conversation history, cost, tokens, and the last message.
+        """
+
+        print(f"\n\n🚀 ---------- {self.name} ::: Orchestrator Starting ::: Round Robin Conversation ---------- \n\n")
+
+        self.add_message(prompt)
+
+        total_iterations = loops * len(self.agents)
+        for iteration in range(total_iterations):
+            idx = iteration % len(self.agents)
+            agent_a = self.agents[idx]
+            agent_b = self.agents[(idx + 1) % len(self.agents)]
+
+            print(f"\n\n💬 ---------- Running iteration {iteration} with conversation {agent_a.name} -> {agent_b.name} ----------\n\n")
+
+            # if we are back to the first agent, we need to rest the last message to the prompt
+            if iteration % (len(self.agents)) == 0:
+                self.add_message(prompt)
+
+            # agent_a -> chat -> agent_b
+            if self.last_message_is_string:
+                self.basic_chat(agent_a, agent_b, self.latest_message)
+
+            # agent_a -> func() -> agent_b
+            if self.last_message_is_func_call and self.has_functions(agent_a):
+                self.function_chat(agent_a, agent_b, self.latest_message)
+
+            self.spy_on_agents()
+
+        print(f"---------------- Orchestrator Complete ----------------\n\n")
+
+        self.spy_on_agents()
+
+        was_successful = self.handle_validate_func()
+
+        cost, tokens = self.get_cost_and_tokens ()
+
+        return ConversationResult(
+            success=was_successful,
+            messages=self.messages,
+            cost=cost,
+            tokens=tokens,
+            last_message_str=self.last_message_always_string,
+        )
