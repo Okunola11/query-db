@@ -54,6 +54,21 @@ Block of Text: {{potential_nlq}}
 {{#select "rank" logprobs='logprobs'}} 1{{or}} 2{{or}} 3{{or}} 4{{or}} 5{{/select}}
 """
 
+DATA_INSIGHTS_GUIDANCE_PROMPT = """
+You are a data innovator. You analyze SQL database table structures and generate 3 novel insights for your team to reflect on and query.
+Format your insights in JSON format.
+```json
+[{{#geneach 'insight' num_iterations=3 join=','}}
+{
+    "insight": "{{gen 'insight' temperature=0.7}}",
+    "actionable_business_value": "{{gen 'actionable_value' temperature 0.7}}",
+    "sql": "{{gen 'new_query' temperature=0.7}}"
+}
+{{/geneach}}]
+```"""
+
+INSIGHTS_FILE_REPORTER_PROMPT = "You are a reporter. Format and write json data you receive directly into a file using the write_innovation_file function"
+
 PRODUCT_MANAGER_PROMPT = (
     "Product Manager. Validate the response to make sure it is correct."
     + COMPLETION_PROMPT
@@ -188,6 +203,31 @@ def build_scrum_master_team(instruments: PostgresAgentInstruments):
 
     return [user_proxy, scrum_agent]
 
+def build_insights_team(instruments: PostgresAgentInstruments):
+    user_proxy = autogen.UserProxyAgent(
+        name="Admin",
+        system_message=USER_PROXY_PROMT,
+        code_execution_config=False,
+        human_input_mode="NEVER"
+    )
+
+    insights_agent = InsightsAgent(
+        name="Insights",
+        llm_config=agent_config.base_config,
+        system_message=DATA_INSIGHTS_GUIDANCE_PROMPT,
+        human_input_mode="NEVER"
+    )
+
+    insights_data_reporter = autogen.AssistantAgent(
+        name="Insights_Data_Reporter",
+        llm_config=agent_config.write_innovation_file_config,
+        system_message=INSIGHTS_FILE_REPORTER_PROMPT,
+        human_input_mode="NEVER",
+        function_map={"write_innovation_file": instruments.write_innovation_file}
+    )
+
+    return [user_proxy, insights_agent, insights_data_reporter]
+
 # ------------------- ORCHESTRATION -------------------
 
 def build_team_orchestrator(
@@ -228,6 +268,13 @@ def build_team_orchestrator(
         return orchestrator.Orchestrator(
             name="scrum_master_team",
             agents=build_scrum_master_team(agent_instruments),
+            instruments=agent_instruments,
+            validate_results_func=validate_results
+        )
+    elif team == "data_insights":
+        return orchestrator.Orchestrator(
+            name="data_insights_team",
+            agents=build_insights_team(agent_instruments),
             instruments=agent_instruments,
             validate_results_func=validate_results
         )
@@ -286,3 +333,42 @@ class DefensiveScrumMasterAgent(autogen.ConversableAgent):
         rank = response.get("choices", [{}])[0].get("rank", "3")
 
         return True, rank
+
+
+class InsightsAgent(autogen.ConversableAgent):
+    """
+    Custom agent that uses the guidance function to generate insights in JSON format.
+
+    This agent is designed to work within a conversational framework, and uses the guidance function to generate insights in JSON format.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initializes the InsightsAgent.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Notes:
+            Registers the generate_insights method as a reply function for this agent.
+        """
+        super().__init__(*args, **kwargs)
+        self.register_reply(self, self.generate_insights, position=0)
+
+    def generate_insights(
+        self,
+        messages: Optional[List[Dict]] = None,
+        sender: Optional[List[Dict]] = None,
+    ):
+
+        """Generates insights using the guidance function.
+
+        Args:
+            messages (Optional[List[Dict]], optional): A list of message dictionaries. Defaults to None.
+            sender (Optional[List[Dict]], optional): The sender information. Defaults to None.
+
+        Returns:
+            Tuple[bool, str]: A tuple containing a boolean indicating success and the generated insights in JSON format.
+        """
+        insights = guidance(DATA_INSIGHTS_GUIDANCE_PROMPT)
+        return True, insights
