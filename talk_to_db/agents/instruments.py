@@ -272,7 +272,7 @@ class PostgresAgentInstruments(AgentInstruments):
             str: A success message indicating the file was written.
         """
 
-        fname = self.get_file_path(f"{self.innovation_index}_innovation_file.txt")
+        fname = self.get_file_path(f"{self.innovation_index}_innovation_file.json")
         file.write_file(fname, content)
         self.innovation_index += 1
         return f"Successfully wrote innovation file."
@@ -290,7 +290,7 @@ class PostgresAgentInstruments(AgentInstruments):
 
         # loop from 0 to innovation_index and verify file exists with content
         for i in range(self.innovation_index):
-            fname = self.get_file_path(f"{i}_innovation_file.txt")
+            fname = self.get_file_path(f"{i}_innovation_file.json")
             with open(fname, "r") as f:
                 content = f.read()
                 if not content:
