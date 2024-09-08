@@ -90,6 +90,19 @@ class Orchestrator:
             return self.latest_message.get("content", "")
         return str(self.messages[-1])
 
+    def handle_validate_func(self) -> Tuple[bool, str]:
+        """Runs the validation function if it exists.
+
+        This method checks if the `validate_results_func` attribute is set. If it is, it calls the function and returns the result (assumed to be a tuple containing a boolean success flag and an optional error message). If `validate_results_func` is not set, it returns True and an empty string.
+
+        Returns:
+            Tuple[bool, str]: A tuple containing the validation success flag (boolean) and an optional error message (string).
+        """
+
+        if self.validate_results_func:
+            return self.validate_results_func()
+        return True, ""
+
     def send_message(
         self,
         from_agent: autogen.ConversableAgent,
