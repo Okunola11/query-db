@@ -31,6 +31,7 @@ class ConversationResult:
         cost (float): An estimate of the cost of the conversation, based on the number of tokens used.
         tokens (int): The number of tokens used during the conversation.
         last_message_str (str): The last message sent in the conversation.
+        error_message (str): Error message during the conversation.
     """
 
     success: bool
@@ -38,3 +39,4 @@ class ConversationResult:
     cost: float
     tokens: int
     last_message_str: str
+    error_message: str
