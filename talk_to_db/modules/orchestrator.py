@@ -353,7 +353,7 @@ class Orchestrator:
 
                 print(f"---------- Orchestrator Complete ----------\n\n")
 
-                was_successful = self.validate_results_func()
+                was_successful, error_message = self.validate_results_func()
 
                 self.spy_on_agents()
 
@@ -364,7 +364,8 @@ class Orchestrator:
                     messages=self.messages,
                     cost=cost,
                     tokens=tokens,
-                    last_message_str=self.last_message_always_string
+                    last_message_str=self.last_message_always_string,
+                    error_message=error_message
                 )
 
     def broadcast_conversation(self, prompt: str) -> ConversationResult:
@@ -407,7 +408,7 @@ class Orchestrator:
 
         print(f"---------- Orchestrator Complete ----------\n\n")
         
-        was_successful = self.validate_results_func()
+        was_successful, error_message = self.validate_results_func()
         
         if was_successful:
             print(f"✅ Orchestrator was successful")
@@ -421,7 +422,8 @@ class Orchestrator:
             messages=self.messages,
             cost=cost,
             tokens=tokens,
-            last_message_str=self.last_message_always_string
+            last_message_str=self.last_message_always_string,
+            error_message=error_message
         )
 
     def round_robin_conversation(self, prompt: str, loops: int = 1) -> ConversationResult:
@@ -479,7 +481,7 @@ class Orchestrator:
 
         self.spy_on_agents()
 
-        was_successful = self.handle_validate_func()
+        was_successful, error_message = self.handle_validate_func()
 
         cost, tokens = self.get_cost_and_tokens ()
 
@@ -489,4 +491,5 @@ class Orchestrator:
             cost=cost,
             tokens=tokens,
             last_message_str=self.last_message_always_string,
+            error_message=error_message
         )
