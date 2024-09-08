@@ -211,9 +211,9 @@ class PostgresAgentInstruments(AgentInstruments):
             content = f.read()
 
         if content:
-            return True
+            return True, ""
         else:
-            return False
+            return False, f"File {fname} is empty"
 
     def write_file(self, content: str):
         """
@@ -294,6 +294,6 @@ class PostgresAgentInstruments(AgentInstruments):
             with open(fname, "r") as f:
                 content = f.read()
                 if not content:
-                    return False
+                    return False, f"File {fname} is empty"
 
-        return True
+        return True, ""
