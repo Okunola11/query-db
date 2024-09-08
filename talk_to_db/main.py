@@ -92,6 +92,15 @@ def main():
             similar_tables
         )
 
+        # ---------- Define related tables
+        related_table_names = db.get_related_tables(similar_tables, n=3)
+
+        core_and_related_table_definitions = (
+            database_embedder.get_table_definitions_from_names(
+                related_table_names + similar_tables
+            )
+        )
+    
         prompt = llm.add_cap_ref(
             prompt,
             f"Use these {POSTGRES_TABLE_DEFINITIONS_CAP_REF} to satisfy the database query.",
@@ -122,6 +131,39 @@ def main():
                 print(f"💰📊🤖 Organization Cost: {data_engr_cost}, tokens: {data_engr_tokens}")
             case _:
                 print(f"❌ Orchestrator failed. Team: {data_engr_orchestrator.name} Failed.")
+
+        # -------------------------------- DATA INSIGHTS TEAM --------------------------------
+        # ----- Generates novel Insights based on sql table definitions and the prompt -------
+
+        innovation_prompt = f"Given this database query: '{raw_prompt}'. Generate novel insights and new database queries to give business insights."
+
+        insights_prompt = llm.add_cap_ref(
+            innovation_prompt,
+            f"Use these {POSTGRES_TABLE_DEFINITIONS_CAP_REF} to satisfy the database query.",
+            POSTGRES_TABLE_DEFINITIONS_CAP_REF,
+            core_and_related_table_definitions
+        )
+
+        data_insights_orchestrator = agents.build_team_orchestrator(
+            "data_insights",
+            agent_instruments,
+            validate_results=agent_instruments.validate_innovation_files
+        )
+
+        data_insights_conversation_results: ConversationResult = (
+            data_insights_orchestrator.round_robin_conversation(
+                insights_prompt, loops=1
+            )
+        )
+
+        match data_insights_conversation_results:
+            case ConversationResult(
+                success=True, cost=data_insights_cost, tokens=data_insights_tokens
+            ):
+                print(f"✅ Orchestrator was successful. Team: {data_insights_orchestrator.name}")
+                print(f"💰📊🤖 {data_insights_orchestrator.name} Cost: {data_insights_cost}, tokens: {data_insights_tokens}")
+            case _:
+                print(f"❌ Orchestrator failed. Team: {data_insights_orchestrator.name} Failed")
 
 
 if __name__ == "__main__":
