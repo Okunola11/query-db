@@ -175,4 +175,64 @@ class PostgresManager:
             definitions[table_name] = self.get_table_definitions(table_name)
         return definitions
 
-    
+    def get_related_tables(self, table_list, n=2):
+        """Retrieves a list of tables related to the given tables through foreign key references.
+
+        This method queries the database to find tables that have foreign keys referencing the given tables,
+        as well as tables that are referenced by the given tables. The results are combined and duplicates are removed.
+
+        Args:
+            table_list (list): A list of table names to find related tables for.
+            n (int, optional): The maximum number of related tables to retrieve for each table. Defaults to 2.
+
+        Returns:
+            list: A list of unique table names related to the given tables through foreign key references.
+        """
+
+        related_tables_dict = {}
+
+        for table in table_list:
+            # Query to fetch tables that have foreign key referencing the given table
+            self.cur.execute(
+                """
+                SELECT
+                    a.relname AS table_name
+                FROM
+                    pg_constraint con
+                    JOIN pg_class a ON a.oid = con.conrelid
+                WHERE
+                    confrelid = (SELECT oid FROM pg_class WHERE relname = %s)
+                LIMIT %s;
+                """,
+                (table, n),
+            )
+
+            related_tables = [row[0] for row in self.cur.fetchall()]
+
+            # Query to fetch tables that the given table references
+            self.cur.execute(
+                """
+                SELECT
+                    a.relname AS referenced_table_name
+                FROM
+                    pg_constraint con
+                    JOIN pg_class a ON a.oid = con.confrelid
+                WHERE
+                    conrelid = (SELECT oid FROM pg_class WHERE relname = %s)
+                LIMIT %s;
+                """,
+                (table, n),
+            )
+
+            related_tables += [row[0] for row in self.cur.fetchall()]
+
+            related_tables_dict[table] = related_tables
+
+        # convert the dict to list and remove dups
+        related_tables_list = []
+        for table, related_tables in related_tables_dict.items():
+            related_tables_list += related_tables
+
+        related_tables_list = list(set(related_tables_list))
+
+        return related_tables_list
