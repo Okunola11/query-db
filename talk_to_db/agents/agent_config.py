@@ -106,6 +106,27 @@ write_yml_file_config = {
     ]
 }
 
+# configuration for data insights team
+write_innovation_file_config = {
+    **base_config,
+    "functions": [
+        {
+            "name": "write_innovation_file",
+            "description": "Write a file to the filesystem",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "The content of the file to write"
+                    }
+                },
+                "required": ['content'],
+            },
+        },
+    ]
+}
+
 # ------------------- FUNCTION MAPS -------------------
 
 def create_function_map(name: str, func: callable):
