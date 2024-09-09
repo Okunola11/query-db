@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from typing import List
 
 
@@ -12,11 +13,13 @@ class Chat:
         from_name (str): The name of the sender of the message.
         to_name (str): The name of the recipient of the message.
         message (str): The content of the chat message.
+        created (int): The time the chat was created.
     """
 
     from_name: str
     to_name: str
     message: str
+    created: int = field(default_factory=time.time)
 
 
 @dataclass
