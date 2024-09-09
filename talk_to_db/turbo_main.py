@@ -32,6 +32,41 @@ run_sql_tool_config = {
 
 
 def main():
+    """
+    Main function for executing a database query using the Turbo4 assistant and PostgresAgentInstruments.
+
+    This function performs the following steps:
+    1. Parses command-line arguments to get the AI prompt.
+    2. Validates the presence of a prompt and constructs a database query prompt.
+    3. Initializes a Turbo4 assistant and a unique session ID for tracking.
+    4. Sets up a connection to a PostgreSQL database using `PostgresAgentInstruments`.
+    5. Retrieves and embeds table definitions from the database.
+    6. Identifies similar tables based on the provided prompt and updates the prompt with these table definitions.
+    7. Configures the Turbo4 assistant with a specific set of tools and instructions.
+    8. Creates a thread for interacting with the assistant and processes the prompt to generate SQL queries.
+    9. Runs the generated SQL queries and validates their execution.
+    10. Monitors the assistant's activities and calculates associated costs and tokens.
+    11. Outputs a confirmation message once the process is complete.
+
+    Command-line Arguments:
+        --prompt (str): The prompt for the AI, specifying the database query to fulfill.
+
+    Process Flow:
+        - Parse the prompt argument.
+        - Initialize database embeddings and identify similar tables.
+        - Update the prompt with table definitions.
+        - Create and configure the Turbo4 assistant with tools.
+        - Execute and validate SQL queries.
+        - Record and report the assistant's activities and costs.
+
+    Raises:
+        ValueError: If the prompt is not provided.
+        Other exceptions: Errors related to database operations or assistant interactions.
+
+    Example:
+        $ poetry run turbo --prompt "Which users with pro subscription are located in LA"
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", help="The prompt for the AI")
     args = parser.parse_args()
