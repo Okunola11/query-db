@@ -26,3 +26,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 start = "talk_to_db.main:main"
+turbo = "talk_to_db.turbo_main:main"
