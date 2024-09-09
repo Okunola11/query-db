@@ -117,25 +117,44 @@ def main():
             TurboTool("run_sql", run_sql_tool_config, agent_instruments.run_sql)
         ]
 
-        (
-            assistant.get_or_create_assistant(assistant_name)
-            .set_instructions(
-                "You are an elite SQL developer. You generate the most concise and performant SQL queries"
-            )
-            .equip_tools(tools)
-            .make_thread()
-            .add_message(prompt)
-            .run_thread()
-            .add_message(
-                "Use the run_sql function to run the SQL you have just generated."
-            )
-            .run_thread(toolbox=[tools[0].name])
-            .run_validation(agent_instruments.validate_run_sql)
-            .spy_on_assistant(agent_instruments.make_agent_chat_file(assistant_name))
-            .get_cost_and_tokens(agent_instruments.make_agent_cost_file(assistant_name))
+        # (
+        #     assistant.get_or_create_assistant(assistant_name)
+        #     .set_instructions(
+        #         "You are an elite SQL developer. You generate the most concise and performant SQL queries"
+        #     )
+        #     .equip_tools(tools)
+        #     .make_thread()
+        #     .add_message(prompt)
+        #     .run_thread()
+        #     .add_message(
+        #         "Use the run_sql function to run the SQL you have just generated."
+        #     )
+        #     .run_thread(toolbox=[tools[0].name])
+        #     .run_validation(agent_instruments.validate_run_sql)
+        #     .spy_on_assistant(agent_instruments.make_agent_chat_file(assistant_name))
+        #     .get_cost_and_tokens(agent_instruments.make_agent_cost_file(assistant_name))
+        # )
+
+        # print(f"✅ Turbo4 Assistant finished.")
+
+    # -------------------- SIMPLE PROMPT SOLUTION - 2 API CALLS
+
+        sql_response = llm.prompt(
+            prompt,
+            model="gpt-4o-mini",
+            instructions="You are an elite SQL developer. You generate the most concise and performant SQL queries."
         )
 
-        print(f"✅ Turbo4 Assistant finished.")
+        response = llm.prompt_func(
+            "Use the run_sql function to run the SQL you have just generated: "
+            + sql_response,
+            model="gpt-4o-mini",
+            instructions="You are an elite SQL developer. You generate the most concise and performant SQL queries.",
+            turbo_tools=tools
+        )
+        print(f"\n\nprompt_funct() respnse is: {response}")
+
+        agent_instruments.validate_run_sql()
 
 
 if __name__ == "__main__":
