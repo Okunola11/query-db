@@ -16,7 +16,8 @@ class AgentInstruments:
     Methods:
         sync_messages(messages: list): Syncs messages with the orchestrator.
         root_dir: A property that returns the root directory for the session.
-        agent_chat_file: A property that returns the path to the agent chat file.
+        make_agent_chat_file: A property that returns the path to the agents chat file.
+        make_agent_cost_file: A property that returns the path to the agents cost file.
     """
 
     def __init__(self) -> None:
@@ -49,6 +50,15 @@ class AgentInstruments:
         """
 
         return os.path.join(self.root_dir, f"agents_chat_{team_name}.json")
+
+    def make_agent_cost_file(self, team_name: str):
+        """Returns the path to the agents cost file for a team.
+
+        Returns:
+            str: The path to the team's agent cost file.
+        """
+
+        return os.path.join(self.root_dir, f"agents_cost_{team_name}.json")
 
     @property
     def root_dir(self):
